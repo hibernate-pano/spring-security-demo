@@ -1,0 +1,14 @@
+# Description: Application configuration
+server:
+  port: 80
+spring:
+  # 设置数据库连接
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: root
+    password: mysql@@2020
+    url: jdbc:mysql://localhost:3306/laoqi?useUnicode=true&characterEncoding=utf-8&useSSL=false&serverTimezone=GMT%2B8
+# 设置日志级别
+logging:
+  level:
+    root: info
