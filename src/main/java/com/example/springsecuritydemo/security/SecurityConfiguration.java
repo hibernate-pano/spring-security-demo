@@ -1,9 +1,12 @@
 package com.example.springsecuritydemo.security;
 
+import cn.hutool.http.HttpStatus;
 import com.example.springsecuritydemo.service.UserService;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -19,6 +22,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 
 import javax.annotation.Resource;
+import java.io.PrintWriter;
 
 /**
  * SecurityConfiguration
@@ -50,7 +54,11 @@ public class SecurityConfiguration {
             // 认证失败处理
             log.error("认证失败，authException = [{}]", authException.toString());
             response.setContentType("application/json;charset=utf-8");
-            response.getWriter().write("认证失败");
+            response.setStatus(HttpStatus.HTTP_UNAUTHORIZED);
+            ResponseEntity<Object> responseEntity = ResponseEntity.status(HttpStatus.HTTP_UNAUTHORIZED).body("认证失败");
+            response.getWriter().write(new ObjectMapper().writeValueAsString(responseEntity));
+            response.getWriter().flush();
+            response.getWriter().close();
         };
     }
 
@@ -63,7 +71,12 @@ public class SecurityConfiguration {
             // 授权失败处理
             log.error("授权失败，accessDeniedException = [{}]", accessDeniedException.toString());
             response.setContentType("application/json;charset=utf-8");
-            response.getWriter().write("授权失败");
+            response.setStatus(HttpStatus.HTTP_FORBIDDEN);
+            try (PrintWriter writer = response.getWriter()) {
+                ResponseEntity<Object> responseEntity = ResponseEntity.status(HttpStatus.HTTP_FORBIDDEN).body("授权失败");
+                writer.write(new ObjectMapper().writeValueAsString(responseEntity));
+                writer.flush();
+            }
         };
     }
 
@@ -77,15 +90,14 @@ public class SecurityConfiguration {
         // 开启exceptionHandling
         http.exceptionHandling()
                 // 认证失败处理
-                .authenticationEntryPoint(authenticationEntryPoint())
+                .authenticationEntryPoint(this.authenticationEntryPoint())
                 // 授权失败处理
-                .accessDeniedHandler(accessDeniedHandler());
+                .accessDeniedHandler(this.accessDeniedHandler());
         // 所有请求都需要认证
         http.authorizeRequests()
                 .anyRequest().authenticated();
         // 开启表单登录
         http.formLogin()
-                .loginPage("/login.html")
                 .loginProcessingUrl("/login")
                 .permitAll()
                 .usernameParameter("username")
