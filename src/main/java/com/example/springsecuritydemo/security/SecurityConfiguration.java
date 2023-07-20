@@ -15,6 +15,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
@@ -56,9 +57,10 @@ public class SecurityConfiguration {
             response.setContentType("application/json;charset=utf-8");
             response.setStatus(HttpStatus.HTTP_UNAUTHORIZED);
             ResponseEntity<Object> responseEntity = ResponseEntity.status(HttpStatus.HTTP_UNAUTHORIZED).body("认证失败");
-            response.getWriter().write(new ObjectMapper().writeValueAsString(responseEntity));
-            response.getWriter().flush();
-            response.getWriter().close();
+            try (PrintWriter writer = response.getWriter()) {
+                writer.write(new ObjectMapper().writeValueAsString(responseEntity));
+                writer.flush();
+            }
         };
     }
 
@@ -90,9 +92,9 @@ public class SecurityConfiguration {
         // 开启exceptionHandling
         http.exceptionHandling()
                 // 认证失败处理
-                .authenticationEntryPoint(this.authenticationEntryPoint())
+                .authenticationEntryPoint(authenticationEntryPoint())
                 // 授权失败处理
-                .accessDeniedHandler(this.accessDeniedHandler());
+                .accessDeniedHandler(accessDeniedHandler());
         // 所有请求都需要认证
         http.authorizeRequests()
                 .anyRequest().authenticated();
@@ -132,6 +134,11 @@ public class SecurityConfiguration {
                 String username = authentication.getName();
                 String password = authentication.getCredentials().toString();
                 UserDetails user = userService.loadUserByUsername(username);
+                if (user == null) {
+                    // 用户不存在，抛出异常
+                    log.info("登陆失败，User = [{}]", username);
+                    throw new UsernameNotFoundException("用户不存在");
+                }
                 // 密码加密
                 if (passwordEncoder().matches(password, user.getPassword())) {
                     // 密码正确，返回一个认证成功的Authentication
