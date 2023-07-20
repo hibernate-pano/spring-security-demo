@@ -31,17 +31,14 @@ public class UserService implements UserDetailsService {
         // 查询用户表是否有此用户名对应的用户，如果有一个则返回，如果没有则抛出异常，如果有多个则抛出异常
         LambdaQueryWrapper<User> queryWrapper = new LambdaQueryWrapper<>();
         queryWrapper.eq(User::getUsername, username);
-        List<User> list = this.userMapper.selectList(queryWrapper);
+        User user = this.userMapper.selectOne(queryWrapper);
 
-        if (CollectionUtils.isEmpty(list)) {
+        if (user == null) {
             log.error("用户不存在，username = [{}]", username);
             throw new UsernameNotFoundException("用户不存在");
-        } else if (list.size() > 1) {
-            log.error("用户不唯一，username = [{}]", username);
-            throw new UsernameNotFoundException("用户不唯一");
         } else {
             log.info("用户存在，username = [{}]", username);
-            return list.get(0);
+            return user;
         }
     }
 }

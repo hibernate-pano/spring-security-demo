@@ -20,7 +20,7 @@ import java.util.Collections;
 @Data
 public class User implements UserDetails {
 
-    @TableId(type = IdType.NONE)
+    @TableId(type = IdType.AUTO)
     private Integer id;
 
     private String username;
