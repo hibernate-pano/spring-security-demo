@@ -21,6 +21,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 
 import javax.annotation.Resource;
 import java.io.PrintWriter;
@@ -82,6 +85,51 @@ public class SecurityConfiguration {
         };
     }
 
+    @Bean
+    public LogoutSuccessHandler logoutSuccessHandler() {
+        return (request, response, authentication) -> {
+            // 注销成功处理
+            log.info("注销成功，authentication = [{}]", authentication.toString());
+            response.setContentType("application/json;charset=utf-8");
+            response.setStatus(HttpStatus.HTTP_OK);
+            try (PrintWriter writer = response.getWriter()) {
+                ResponseEntity<Object> responseEntity = ResponseEntity.status(HttpStatus.HTTP_OK).body("注销成功");
+                writer.write(new ObjectMapper().writeValueAsString(responseEntity));
+                writer.flush();
+            }
+        };
+    }
+
+    @Bean
+    public AuthenticationSuccessHandler authenticationSuccessHandler() {
+        return (request, response, authentication) -> {
+            // 认证成功处理
+            log.info("认证成功，authentication = [{}]", authentication.toString());
+            response.setContentType("application/json;charset=utf-8");
+            response.setStatus(HttpStatus.HTTP_OK);
+            try (PrintWriter writer = response.getWriter()) {
+                ResponseEntity<Object> responseEntity = ResponseEntity.status(HttpStatus.HTTP_OK).body("认证成功");
+                writer.write(new ObjectMapper().writeValueAsString(responseEntity));
+                writer.flush();
+            }
+        };
+    }
+
+    @Bean
+    public AuthenticationFailureHandler authenticationFailureHandler() {
+        return (request, response, exception) -> {
+            // 认证失败处理
+            log.error("认证失败，exception = [{}]", exception.toString());
+            response.setContentType("application/json;charset=utf-8");
+            response.setStatus(HttpStatus.HTTP_UNAUTHORIZED);
+            try (PrintWriter writer = response.getWriter()) {
+                ResponseEntity<Object> responseEntity = ResponseEntity.status(HttpStatus.HTTP_UNAUTHORIZED).body("认证失败");
+                writer.write(new ObjectMapper().writeValueAsString(responseEntity));
+                writer.flush();
+            }
+        };
+    }
+
     /**
      * 创建SecurityFilterChain
      */
@@ -90,11 +138,11 @@ public class SecurityConfiguration {
         // 开启session
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED);
         //// 开启exceptionHandling
-        //http.exceptionHandling()
-        //        // 认证失败处理
-        //        .authenticationEntryPoint(authenticationEntryPoint())
-        //        // 授权失败处理
-        //        .accessDeniedHandler(accessDeniedHandler());
+        http.exceptionHandling()
+                // 认证失败处理
+                .authenticationEntryPoint(this.authenticationEntryPoint())
+                // 授权失败处理
+                .accessDeniedHandler(this.accessDeniedHandler());
         // 所有请求都需要认证
         http.authorizeRequests()
                 .anyRequest().authenticated();
@@ -102,15 +150,17 @@ public class SecurityConfiguration {
         http.formLogin()
                 .loginPage("/login.html")
                 .loginProcessingUrl("/login")
-                .defaultSuccessUrl("/index.html")
-                // 认证成功处理
                 .permitAll()
                 .usernameParameter("username")
-                .passwordParameter("password");
+                .passwordParameter("password")
+                .successHandler(this.authenticationSuccessHandler())
+                .failureHandler(this.authenticationFailureHandler());
+        //.defaultSuccessUrl("/index.html")
         // 开启注销
         http.logout()
                 .logoutUrl("/logout")
-                .logoutSuccessUrl("/login.html")
+                //.logoutSuccessUrl("/login.html")
+                .logoutSuccessHandler(this.logoutSuccessHandler())
                 // 清除认证信息
                 .invalidateHttpSession(true)
                 // 清除cookie
@@ -124,6 +174,7 @@ public class SecurityConfiguration {
                 .disable();
         return http.build();
     }
+
 
     /**
      * 创建 AuthenticationProvider
