@@ -89,18 +89,21 @@ public class SecurityConfiguration {
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         // 开启session
         http.sessionManagement().sessionCreationPolicy(SessionCreationPolicy.IF_REQUIRED);
-        // 开启exceptionHandling
-        http.exceptionHandling()
-                // 认证失败处理
-                .authenticationEntryPoint(authenticationEntryPoint())
-                // 授权失败处理
-                .accessDeniedHandler(accessDeniedHandler());
+        //// 开启exceptionHandling
+        //http.exceptionHandling()
+        //        // 认证失败处理
+        //        .authenticationEntryPoint(authenticationEntryPoint())
+        //        // 授权失败处理
+        //        .accessDeniedHandler(accessDeniedHandler());
         // 所有请求都需要认证
         http.authorizeRequests()
                 .anyRequest().authenticated();
         // 开启表单登录
         http.formLogin()
+                .loginPage("/login.html")
                 .loginProcessingUrl("/login")
+                .defaultSuccessUrl("/index.html")
+                // 认证成功处理
                 .permitAll()
                 .usernameParameter("username")
                 .passwordParameter("password");
@@ -117,7 +120,8 @@ public class SecurityConfiguration {
                 .rememberMeParameter("remember-me")
                 .tokenValiditySeconds(60 * 60 * 24 * 7);
         // 关闭csrf
-        http.csrf().disable();
+        http.csrf()
+                .disable();
         return http.build();
     }
 
