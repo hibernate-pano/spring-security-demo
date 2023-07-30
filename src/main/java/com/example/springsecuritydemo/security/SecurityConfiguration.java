@@ -1,6 +1,9 @@
 package com.example.springsecuritydemo.security;
 
 import cn.hutool.http.HttpStatus;
+import com.example.springsecuritydemo.security.filters.AfterLoginFilter;
+import com.example.springsecuritydemo.security.filters.BeforeLoginFilter;
+import com.example.springsecuritydemo.security.filters.CustomLoginFilter;
 import com.example.springsecuritydemo.service.UserService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -23,6 +26,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.security.web.authentication.AuthenticationFailureHandler;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 
 import javax.annotation.Resource;
@@ -172,9 +176,13 @@ public class SecurityConfiguration {
         // 关闭csrf
         http.csrf()
                 .disable();
+
+        http.addFilterBefore(new BeforeLoginFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAt(new CustomLoginFilter(), UsernamePasswordAuthenticationFilter.class);
+        http.addFilterAfter(new AfterLoginFilter(), UsernamePasswordAuthenticationFilter.class);
+
         return http.build();
     }
-
 
     /**
      * 创建 AuthenticationProvider
